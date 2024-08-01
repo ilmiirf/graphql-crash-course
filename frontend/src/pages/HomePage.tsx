@@ -6,17 +6,23 @@ import TransactionForm from "../components/TransactionForm.tsx";
 
 import { MdLogout } from "react-icons/md";
 import toast from "react-hot-toast";
-import { useMutation } from "@apollo/client";
+import { useMutation, useQuery } from "@apollo/client";
 import { LOGOUT } from "../graphql/mutations/user.mutation.ts";
+import { GET_TRANSACTION_STATISTICS } from "../graphql/queries/transaction.query.ts";
+import { useEffect, useState } from "react";
+import { GET_AUTHENTICATED_USER } from "../graphql/queries/user.query.ts";
 
 ChartJS.register(ArcElement, Tooltip, Legend);
 
 const HomePage = () => {
-  const chartData = {
-    labels: ["Saving", "Expense", "Investment"],
+  const { data } = useQuery(GET_TRANSACTION_STATISTICS);
+  const { data: authUserData } = useQuery(GET_AUTHENTICATED_USER);
+
+  const [chartData, setChartData] = useState({
+    labels: [],
     datasets: [
       {
-        label: "%",
+        label: "$",
         data: [13, 8, 3],
         backgroundColor: [
           "rgba(75, 192, 192)",
@@ -34,9 +40,46 @@ const HomePage = () => {
         cutout: 110,
       },
     ],
-  };
+  });
 
-  const [logout, { loading }] = useMutation(LOGOUT, {
+  useEffect(() => {
+    if (data?.categoryStatistics) {
+      const categories = data.categoryStatistics.map(
+        (stat: any) => stat.category
+      );
+      const totalAmount = data.categoryStatistics.map(
+        (stat: any) => stat.totalAmount
+      );
+      let backgroundColors: string[] = [];
+      let borderColors: string[] = [];
+
+      categories.forEach((category: string) => {
+        if (category === "saving") {
+          backgroundColors.push("rgba(75, 192, 192)");
+          borderColors.push("rgba(75, 192, 192)");
+        } else if (category === "expense") {
+          backgroundColors.push("rgba(255, 99, 132)");
+          borderColors.push("rgba(255, 99, 132)");
+        } else {
+          backgroundColors.push("rgba(54, 162, 235)");
+          borderColors.push("rgba(54, 162, 235)");
+        }
+      });
+      setChartData((prev: any) => ({
+        labels: categories,
+        datasets: [
+          {
+            ...prev.datasets[0],
+            data: totalAmount,
+            backgroundColor: backgroundColors,
+            borderColor: borderColors,
+          },
+        ],
+      }));
+    }
+  }, [data]);
+
+  const [logout, { loading, client }] = useMutation(LOGOUT, {
     refetchQueries: ["GetAuthenticatedUser"],
   });
 
@@ -44,6 +87,7 @@ const HomePage = () => {
     try {
       await logout();
       toast.success("Logged out successfully");
+      client.resetStore();
     } catch (error) {
       const err = error as Error;
       toast.error(err.message);
@@ -58,7 +102,7 @@ const HomePage = () => {
             Spend wisely, track wisely
           </p>
           <img
-            src={"https://tecdn.b-cdn.net/img/new/avatars/2.webp"}
+            src={authUserData?.authUser.profilePicture}
             className="w-11 h-11 rounded-full border cursor-pointer"
             alt="Avatar"
           />

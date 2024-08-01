@@ -14,9 +14,10 @@ import toast from "react-hot-toast";
 
 interface CardProps {
   transaction?: TransactionType;
+  authUser?: any;
 }
 
-const Card = ({ transaction }: CardProps) => {
+const Card = ({ transaction, authUser }: CardProps) => {
   const [deleteTransactionMutation, { loading }] = useMutation(
     DELETE_TRANSACTION,
     {
@@ -83,7 +84,7 @@ const Card = ({ transaction }: CardProps) => {
             {formatDate(transaction?.date)}
           </p>
           <img
-            src={"https://tecdn.b-cdn.net/img/new/avatars/2.webp"}
+            src={authUser?.profilePicture}
             className="h-8 w-8 border rounded-full"
             alt=""
           />
